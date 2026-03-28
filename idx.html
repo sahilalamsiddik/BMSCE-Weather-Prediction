@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WOW Weather | AI Weather Platform</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.9.3/dist/dotlottie-wc.js" type="module"></script>
+
+<style>
+/* --- GLOBAL & BACKGROUND --- */
+body {
+  margin: 0; font-family: 'Poppins', sans-serif; color: #fff;
+  overflow-x: hidden; background: #0f172a; 
+}
+
+#bg-layer {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -3;
+  background: linear-gradient(-45deg, #0f172a, #1e3a8a, #0369a1, #1e40af);
+  background-size: 400% 400%; animation: gradientMove 15s ease infinite;
+}
+
+/* THUNDERSTORM FLASH EFFECT */
+#lightning-flash {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: white; opacity: 0; z-index: -2; pointer-events: none;
+}
+.strike { animation: lightningStrike 0.3s ease-out; }
+@keyframes lightningStrike {
+    0% { opacity: 0; }
+    10% { opacity: 0.7; }
+    15% { opacity: 0.2; }
+    20% { opacity: 0.8; }
+    100% { opacity: 0; }
+}
+
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; }
+}
+
+/* --- MODIFIED SUN ANIMATION --- */
+#sun-container {
+    position: absolute;
+    top: 150px; 
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+
+.realistic-sun {
+    width: 65px;
+    height: 65px;
+    background: radial-gradient(circle, #fff7ed 0%, #facc15 40%, #f97316 100%);
+    border-radius: 50%;
+    box-shadow: 
+        0 0 40px #facc15, 
+        0 0 70px #f97316,
+        0 0 120px rgba(250, 204, 21, 0.4);
+    position: relative;
+    animation: sunPulse 5s ease-in-out infinite;
+}
+
+.realistic-sun::after {
+    content: '';
+    position: absolute;
+    top: -10%; left: -10%; width: 120%; height: 120%;
+    background: rgba(250, 204, 21, 0.2);
+    border-radius: 50%;
+    filter: blur(15px);
+}
+
+@keyframes sunPulse {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.08); filter: brightness(1.15); }
+}
+
+/* --- MODIFIED SCROLL ARROW (Faded Circle) --- */
+#scroll-arrow {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    width: 55px;
+    height: 55px;
+    background: rgba(128, 128, 128, 0.3);
+    backdrop-filter: blur(4px);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: #facc15;
+    animation: bounce 2s infinite;
+    cursor: pointer;
+    transition: opacity 0.3s ease, background 0.3s ease;
+}
+
+#scroll-arrow:hover { background: rgba(128, 128, 128, 0.5); }
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateX(-50%) translateY(0);}
+    40% {transform: translateX(-50%) translateY(-10px);}
+    60% {transform: translateX(-50%) translateY(-5px);}
+}
+
+/* --- TOP PANEL (NAVBAR) --- */
+.navbar-wrapper { padding: 20px 60px; position: sticky; top: 0; z-index: 100; }
+.navbar { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    padding: 15px 45px; 
+    background: #1e293b !important; 
+    border: 2px solid #ffffff !important; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border-radius: 20px;
+}
+.navbar h2 { font-size: 28px; margin: 0; color: #facc15; cursor: pointer; font-weight: 700; }
+
+.nav-right-group { display: flex; gap: 35px; align-items: center; }
+.nav-link { 
+    color: #ffffff; cursor: pointer; font-weight: 500; text-decoration: none; 
+    transition: 0.3s; font-size: 19px; background: none; border: none; padding: 0; 
+}
+.nav-link:hover { color: #facc15; }
+
+/* THREE DOTS MENU */
+.dots-menu { position: relative; display: inline-block; }
+.dots-btn { font-size: 26px; cursor: pointer; color: #ffffff; padding: 0 10px; transition: 0.3s; }
+.dropdown-content {
+  display: none; position: absolute; right: 0; top: 35px; 
+  background-color: #1e293b; min-width: 160px; border-radius: 12px; 
+  overflow: hidden; border: 1px solid #ffffff; box-shadow: 0 8px 16px rgba(0,0,0,0.4); z-index: 1000;
+}
+.dropdown-content a { color: #ffffff; padding: 12px 16px; text-decoration: none; display: block; font-size: 15px; transition: 0.2s; }
+.dropdown-content a:hover { background-color: #334155; color: #facc15; }
+.dots-menu:hover .dropdown-content { display: block; }
+
+/* --- AI CHATBOT WINDOW --- */
+#chat-window {
+    position: fixed; top: 0; right: -450px; width: 400px; height: 100vh;
+    background: #1e293b; border-left: 2px solid #ffffff; 
+    display: flex; flex-direction: column; z-index: 2000; 
+    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -10px 0 50px rgba(0,0,0,0.6);
+}
+#chat-window.active { right: 0; }
+.chat-header { background: #0f172a; padding: 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ffffff; }
+.chat-header span { font-weight: 600; color: #facc15; font-size: 1.2rem; }
+.chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: rgba(15, 23, 42, 0.4); }
+.msg { padding: 12px 16px; border-radius: 15px; font-size: 14px; line-height: 1.5; max-width: 85%; }
+.user-msg { background: #facc15; color: #0f172a; align-self: flex-end; border-bottom-right-radius: 2px; font-weight: 500; }
+.ai-msg { background: #334155; color: #ffffff; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid rgba(255,255,255,0.1); }
+.chat-input-area { padding: 20px; background: #0f172a; display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-bottom: 30px; }
+.chat-input-area input { flex: 1; padding: 15px; border-radius: 10px; border: 1px solid #ffffff; background: transparent; color: white; outline: none; }
+.chat-send-btn { background: #facc15; border: none; padding: 0 20px; border-radius: 10px; color: #0f172a; font-weight: bold; cursor: pointer; transition: 0.2s; }
+
+/* --- PAGES --- */
+.page { display: none; padding: 0 80px; animation: fadeIn 0.5s ease; min-height: 85vh; }
+.active-page { display: flex; flex-direction: column; align-items: center; } 
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- HOME CONTENT --- */
+.hero-section { display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%; min-height: 85vh; }
+.left-content { max-width: 650px; display: flex; flex-direction: column; gap: 20px; }
+.left-content h1 { font-size: 55px; margin: 0; text-shadow: 0 4px 15px rgba(0,0,0,0.4); line-height: 1.1; font-weight: 700; }
+.description-text {
+    font-size: 16px; line-height: 1.8; color: rgba(255, 255, 255, 0.9);
+    background: rgba(15, 23, 42, 0.7); padding: 25px; border-radius: 15px; border-left: 4px solid #facc15;
+}
+.card-home { 
+    width: 450px; padding: 40px; text-align: center; 
+    background: rgba(186, 230, 253, 0.4); backdrop-filter: blur(25px);
+    color: #0f172a; border: 2px solid #ffffff !important; border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+}
+.card-home h2 { margin-bottom: 5px; font-size: 32px; font-weight: 700; }
+.sub-tagline { font-weight: 600; font-size: 18px; color: #1e3a8a; margin-bottom: 20px; display: block; }
+
+/* --- WEATHER FACTS SECTION (ADJUSTED FOR BOX) --- */
+.facts-section { width: 100%; padding: 80px 0; display: flex; flex-direction: column; align-items: center; gap: 40px; }
+.facts-title { font-size: 38px; color: #facc15; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+
+/* New box layout for the facts section */
+.facts-outer-box {
+    max-width: 1240px;
+    width: 100%;
+    padding: 40px;
+    background: rgba(30, 41, 59, 0.4);
+    backdrop-filter: blur(15px);
+    border: 2px solid #ffffff; /* White outlining */
+    border-radius: 30px;
+    box-shadow: 0 15px 45px rgba(0,0,0,0.3);
+}
+
+.facts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; width: 100%; }
+.fact-card { 
+    background: rgba(15, 23, 42, 0.6); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+    transition: transform 0.3s ease, border-color 0.3s ease;
+}
+.fact-card:hover { transform: translateY(-10px); border-color: #facc15; }
+.fact-card h3 { color: #facc15; margin-top: 0; font-size: 22px; }
+.fact-card p { font-size: 15px; line-height: 1.6; color: #cbd5e1; }
+
+/* --- PREDICTION CONTENT --- */
+.prediction-container { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 35px; margin-top: 20px;}
+.header-box { padding: 20px 70px; background: rgba(15, 23, 42, 0.9); border: 2px solid #ffffff; border-radius: 15px; }
+.header-box h1 { margin: 0; font-size: 40px; letter-spacing: 2px; font-weight: 700; color: #ffffff; text-transform: uppercase; }
+.input-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 900px; padding: 30px; background: rgba(255,255,255,0.2); border: 2px solid white; border-radius: 20px; }
+input { padding: 15px; border-radius: 10px; border: none; background: white; color: #1e3a8a; font-size: 16px; }
+
+.results-grid { display: none; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; width: 100%; max-width: 1100px; margin-top: 20px; }
+.result-box { padding: 35px 20px; text-align: center; background: rgba(240, 249, 255, 0.95); border-radius: 25px; border: 2px solid #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.result-box .icon { font-size: 35px; margin-bottom: 8px; display: block; }
+.result-box h4 { font-size: 15px; color: #1e40af; text-transform: uppercase; font-weight: 700; margin:0;}
+.result-box p { font-size: 20px; font-weight: 600; color: #0f172a; margin-top: 10px;}
+.suggestion-wide { background: #facc15 !important; }
+
+.btn { background: linear-gradient(135deg, #facc15, #f97316); color: white; padding: 18px 45px; border-radius: 12px; border: 2px solid #ffffff; font-size: 18px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+</style>
+</head>
+
+<body>
+
+<div id="bg-layer"></div>
+<div id="lightning-flash"></div> 
+<canvas id="weather-canvas" style="position:fixed; top:0; left:0; z-index:-2; pointer-events:none;"></canvas>
+
+<div id="sun-container">
+    <div class="realistic-sun"></div>
+</div>
+
+<div id="scroll-arrow" onclick="window.scrollBy({top: 500, behavior: 'smooth'})">↓</div>
+
+<div class="navbar-wrapper">
+  <nav class="navbar">
+    <h2 onclick="showPage('home')">WOW Weather</h2>
+    <div class="nav-right-group">
+      <button class="nav-link" onclick="showPage('home')">Home</button>
+      <button class="nav-link" onclick="showPage('prediction')">Prediction</button>
+      <button class="nav-link" onclick="toggleChat()">Chatbot</button>
+      <div class="dots-menu">
+        <span class="dots-btn">⋮</span>
+        <div class="dropdown-content">
+          <a href="#">Help Me</a>
+          <a href="#">Contact Us</a>
+          <a href="#" style="color: #ff4444; font-weight: bold;">Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<div id="chat-window">
+    <div class="chat-header">
+        <span>WOW AI ASSISTANT</span>
+        <button onclick="toggleChat()" style="background:none; border:none; color:white; font-size:28px; cursor:pointer;">×</button>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+        <div class="msg ai-msg">Hello! I'm your WOW Weather AI. Ask me anything about weather patterns or forecasting!</div>
+    </div>
+    <div class="chat-input-area">
+        <input type="text" id="chat-input" placeholder="How can I help you today?" onkeypress="handleKey(event)">
+        <button class="chat-send-btn" onclick="sendToAI()">Send</button>
+    </div>
+</div>
+
+<div id="home-page" class="page active-page">
+  <div class="hero-section">
+    <div class="left-content">
+        <h1>Experience <br>Precision Weather</h1>
+        <div class="description-text">
+            Stay ahead of the skies with our advanced weather prediction platform. Designed to deliver highly accurate forecasts up to 6 months in advance, our system keeps you informed and prepared—no matter the season.
+            <br><br>
+            Track rainfall patterns, monitor temperature changes, and stay updated on wind speeds with real-time precision and intelligent forecasting models.
+        </div>
+      </div>
+      <div class="card-home">
+        <dotlottie-wc src="https://lottie.host/750135a6-8e17-49a2-9773-e14eb2002ea6/jRGklsh7eo.lottie" style="width: 200px; height: 200px; margin:0 auto;" autoplay loop></dotlottie-wc>
+        <h2>AI Weather Prediction</h2>
+        <span class="sub-tagline">Intelligent Forecasting Engine</span>
+        <button class="btn" onclick="showPage('prediction')">Get Prediction →</button>
+      </div>
+  </div>
+
+  <div class="facts-section">
+    <div class="facts-outer-box">
+        <h2 class="facts-title" style="text-align: center; margin-bottom: 40px;">Weather Wonders</h2>
+        <div class="facts-grid">
+            <div class="fact-card">
+                <h3>⚡ Lightning Speed</h3>
+                <p>A single bolt of lightning contains enough energy to toast 160,000 slices of bread. That is one powerful breakfast!</p>
+            </div>
+            <div class="fact-card">
+                <h3>❄️ Unique Snowflakes</h3>
+                <p>While often called unique, scientists have actually found "identical twin" snowflakes in rare atmospheric conditions. Still, most are one-of-a-kind!</p>
+            </div>
+            <div class="fact-card">
+                <h3>🌪️ Fastest Winds</h3>
+                <p>The highest wind speed ever recorded was 253 mph during Tropical Cyclone Olivia in 1996. That's faster than a Formula 1 car!</p>
+            </div>
+            <div class="fact-card">
+                <h3>🌡️ Nature's Thermometer</h3>
+                <p>You can tell the temperature by counting cricket chirps! Count how many times a cricket chirps in 15 seconds and add 37 to get the Temp in Fahrenheit.</p>
+            </div>
+            <div class="fact-card">
+                <h3>🌈 Double Rainbows</h3>
+                <p>A double rainbow occurs when light is reflected twice inside a raindrop. The colors of the second arc are always inverted!</p>
+            </div>
+            <div class="fact-card">
+                <h3>🏜️ Rainless Deserts</h3>
+                <p>In the Atacama Desert in Chile, some places haven't seen a drop of rain in over 400 years. Talk about a dry spell!</p>
+            </div>
+        </div>
+    </div>
+    <div style="margin-top: 40px; text-align: center; color: rgba(255,255,255,0.6);">
+        <p>Scroll down to explore more or head to the Prediction Engine above.</p>
+    </div>
+  </div>
+</div>
+
+<div id="prediction-page" class="page">
+    <div class="prediction-container">
+        <div class="header-box"><h1>Forecast Engine</h1></div>
+        <div class="input-grid">
+            <input type="text" id="locInput" placeholder="Enter City Name...">
+            <input type="date" id="datePicker">
+            <input type="time" id="timePicker">
+        </div>
+        <button class="btn" onclick="runPrediction()">Predict Weather Now</button>
+        <div id="resultsArea" class="results-grid">
+            <div class="result-box"><span class="icon">🌡️</span><h4>Temperature</h4><p>-- °C</p></div>
+            <div class="result-box"><span class="icon">🌧️</span><h4>Rain</h4><p>-- %</p></div>
+            <div class="result-box"><span class="icon">💧</span><h4>Humidity</h4><p>-- %</p></div>
+            <div class="result-box"><span class="icon">💨</span><h4>Wind</h4><p>-- km/h</p></div>
+            <div class="result-box suggestion-wide"><span class="icon">💡</span><h4>Condition</h4><p>Ready to analyze...</p></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_KEY = "AIzaSyB8GU4lWSG0bKc5t51Qck-z6AaLe5XZe_w"; 
+
+    window.onscroll = function() {
+        const arrow = document.getElementById('scroll-arrow');
+        if (window.scrollY > 50) {
+            arrow.style.opacity = "0";
+            arrow.style.pointerEvents = "none";
+        } else if (document.getElementById('home-page').style.display !== 'none') {
+            arrow.style.opacity = "1";
+            arrow.style.pointerEvents = "auto";
+        }
+    };
+
+    function toggleChat() {
+        const win = document.getElementById('chat-window');
+        win.classList.toggle('active');
+    }
+
+    function handleKey(e) { if(e.key === 'Enter') sendToAI(); }
+
+    async function sendToAI() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if(!text) return;
+
+    appendMsg(text, 'user-msg');
+    input.value = '';
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_API_KEY`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: text }]
+                }]
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.candidates && data.candidates.length > 0) {
+            appendMsg(data.candidates[0].content.parts[0].text, 'ai-msg');
+        } else {
+            appendMsg("⚠️ API error or invalid key", 'ai-msg');
+        }
+
+    } catch (err) {
+        appendMsg("❌ Network/API error", 'ai-msg');
+    }
+}
+
+    function appendMsg(text, type) {
+        const box = document.getElementById('chat-messages');
+        const div = document.createElement('div');
+        div.className = `msg ${type}`;
+        div.innerText = text;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function showPage(pageId) {
+        document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+        document.getElementById(pageId + '-page').style.display = 'flex';
+        
+        const sun = document.getElementById('sun-container');
+        const arrow = document.getElementById('scroll-arrow');
+        if(pageId === 'home') {
+            sun.style.opacity = "1";
+            arrow.style.opacity = "1";
+        } else {
+            sun.style.opacity = "0";
+            arrow.style.opacity = "0";
+        }
+
+        window.scrollTo(0,0);
+    }
+    
+    async function runPrediction() {
+    const city = document.getElementById('locInput').value;
+    const date = document.getElementById('datePicker').value;
+    const time = document.getElementById('timePicker').value;
+
+    if (!city || !date || !time) {
+        alert("Fill all fields!");
+        return;
+    }
+
+    // Convert date (YYYY-MM-DD → MM-DD)
+    const parts = date.split("-");
+    const formattedDate = parts[1] + "-" + parts[2];
+
+    // Convert time (HH:MM → HH)
+    const hour = time.split(":")[0];
+
+    try {
+        const res = await fetch(
+            `http://127.0.0.1:8000/predict?city=${city}&date=${formattedDate}&time=${hour}`
+        );
+
+        const data = await res.json();
+
+        document.getElementById('resultsArea').style.display = 'grid';
+
+        const boxes = document.querySelectorAll(".result-box p");
+
+        boxes[0].innerText = data.temperature + " °C";
+        boxes[1].innerText = data.rain_probability + " %";
+        boxes[2].innerText = data.humidity + " %";
+        boxes[3].innerText = data.wind + " m/s";
+
+        // Suggestion logic
+        let suggestion = "Normal weather";
+
+        if (data.rain_probability > 60) {
+            suggestion = "Carry an umbrella ☔";
+        } else if (data.temperature > 35) {
+            suggestion = "Too hot! Stay hydrated 🥵";
+        } else if (data.wind > 10) {
+            suggestion = "Windy! Be careful 💨";
+        }
+
+        boxes[4].innerText = suggestion;
+
+    } catch (err) {
+        alert("Backend not running!");
+        console.error(err);
+    }
+}
+
+    const canvas = document.getElementById('weather-canvas');
+    const ctx = canvas.getContext('2d');
+    const lightningLayer = document.getElementById('lightning-flash');
+    let drops = [];
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize); resize();
+
+    class Drop {
+        constructor() { this.init(); }
+        init() { this.x = Math.random() * canvas.width; this.y = Math.random() * -canvas.height; this.speed = Math.random() * 8 + 10; }
+        update() {
+            this.y += this.speed; if (this.y > canvas.height) this.init();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.15)'; ctx.fillRect(this.x, this.y, 1, 15);
+        }
+    }
+
+    for(let i=0; i<100; i++) drops.push(new Drop());
+
+    function triggerLightning() {
+        const delay = Math.random() * 3000 + 1000; 
+        setTimeout(() => {
+            const doubleStrike = Math.random() > 0.7; 
+            flash();
+            if (doubleStrike) setTimeout(flash, 150); 
+            triggerLightning();
+        }, delay);
+    }
+
+    function flash() {
+        lightningLayer.classList.add('strike');
+        setTimeout(() => { lightningLayer.classList.remove('strike'); }, 300); 
+    }
+
+    function animate() { 
+        ctx.clearRect(0,0, canvas.width, canvas.height); 
+        drops.forEach(d => d.update()); 
+        requestAnimationFrame(animate); 
+    }
+
+    animate();
+    triggerLightning();
+</script>
+
+</body>
+</html>
