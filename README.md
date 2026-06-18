@@ -2,4 +2,4 @@ the speciality of this website which makes it different from the others is that 
 
 open terminal
 cd file_location
-uvicorn main:app --reload
+uvicorn main:app --reload.
